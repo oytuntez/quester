@@ -1,0 +1,17 @@
+{
+  "name": "quester",
+  "version": "0.0.0",
+  "authors": [
+    "Oytun Tez <oytuntez@gmail.com>"
+  ],
+  "main": "quester.js",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

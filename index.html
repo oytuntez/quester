@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="swagger-client.min.js" type="application/javascript"></script>
+    <script src="quester.js" type="application/javascript"></script>
+</head>
+<body>
+<div class="quester" data-operation="addPet">Default.</div>
+<script>
+    var swaggerClient = new SwaggerClient({
+        url: "http://petstore.swagger.io/api/api-docs",
+        success: function() {
+            console.log('Swagger: success.');
+            Quester(swaggerClient);
+        }
+    });
+</script>
+</body>
+</html>
