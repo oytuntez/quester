@@ -7,7 +7,7 @@
         root.Quester = factory();
     }
 })(this, function () {
-    var dr, request, parse, isValid, defaults, slice, toString, operationsList = [];
+    var dr, request, parse, isValid, findParentNode, serializeForm, defaults, slice, toString, operationsList = [];
     /*
      ---
      provides  : BuildSugar
@@ -28,6 +28,81 @@
             return [result, req];
         }
     };
+    findParentNode = function(id, className, childObj) {
+        var testObj = childObj.parentNode;
+        var count = 1;
+        console.log(testObj);
+        while(!testObj || testObj.getAttribute('id') != id || testObj.className != className) {
+            testObj = testObj.parentNode;
+            count++;
+        }
+        // now you have the object you are looking for - do something with it
+        return testObj;
+    };
+
+    serializeForm = function serialize(form)
+    {
+        if (!form || form.nodeName !== "form") {
+            return;
+        }
+        var i, j,
+            obj = {};
+        for (i = form.elements.length - 1; i >= 0; i = i - 1) {
+            if (form.elements[i].name === "") {
+                continue;
+            }
+            switch (form.elements[i].nodeName) {
+                case 'input':
+                    switch (form.elements[i].type) {
+                        case 'text':
+                        case 'hidden':
+                        case 'password':
+                        case 'button':
+                        case 'reset':
+                        case 'submit':
+                            obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
+                            break;
+                        case 'checkbox':
+                        case 'radio':
+                            if (form.elements[i].checked) {
+                                obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
+                            }
+                            break;
+                        case 'file':
+                            break;
+                    }
+                    break;
+                case 'textarea':
+                    obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
+                    break;
+                case 'select':
+                    switch (form.elements[i].type) {
+                        case 'select-one':
+                            obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
+                            break;
+                        case 'select-multiple':
+                            for (j = form.elements[i].options.length - 1; j >= 0; j = j - 1) {
+                                if (form.elements[i].options[j].selected) {
+                                    obj[form.elements[i].name] = encodeURIComponent(form.elements[i].options[j].value);
+                                }
+                            }
+                            break;
+                    }
+                    break;
+                case 'button':
+                    switch (form.elements[i].type) {
+                        case 'reset':
+                        case 'submit':
+                        case 'button':
+                            obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
+                            break;
+                    }
+                    break;
+            }
+        }
+        return obj;
+    };
+
     request = {};
     request.base = function (type, url, data) {
         var methods = {
@@ -92,25 +167,42 @@
             urlBox: 'url',
             actionButton: 'action',
             summaryContainer: 'summary',
-            settingsContainer: 'settings',
-            responseContainer: 'response'
+            parametersContainer: 'parameters',
+            headerParametersContainer: 'headers',
+            queryStringParametersContainer: 'queryStrings',
+            formParametersContainer: 'formData',
+            pathParametersContainer: 'pathParams',
+            singleParameter: 'parameter',
+            responseContainer: 'response',
+            actionsContainer: 'actions'
         }
     };
 
     defaults.template = '<h4 class="'+defaults.classNames.title+'"></h4>'+
-                        '<div class="'+defaults.classNames.settingsContainer+'">'+
-                            '<textarea></textarea>'+
-                        '</div>'+
+                        '<form>'+
                         '<div class="'+defaults.classNames.summaryContainer+'">'+
                             '<div>'+
                                 '<span class="'+defaults.classNames.methodName+'"></span>'+
                                 '<input type="text" class="'+defaults.classNames.urlBox+'"/>'+
-                                '<button type="submit" class="'+defaults.classNames.actionButton+'"/>'+
                             '</div>'+
+                        '</div>'+
+                        '<div class="'+defaults.classNames.parametersContainer+'">'+
+                            '<div class="'+defaults.classNames.headerParametersContainer+'">'+
+                            '</div>'+
+                            '<div class="'+defaults.classNames.pathParametersContainer+'">'+
+                            '</div>'+
+                            '<div class="'+defaults.classNames.queryStringParametersContainer+'">'+
+                            '</div>'+
+                            '<div class="'+defaults.classNames.formParametersContainer+'">'+
+                            '</div>'+
+                        '</div>'+
+                        '<div class="'+defaults.classNames.actionsContainer+'">'+
+                            '<button type="submit" class="'+defaults.classNames.actionButton+'"/>'+
                         '</div>'+
                         '<div class="'+defaults.classNames.responseContainer+'">'+
                             '<textarea></textarea>'+
-                        '</div>';
+                        '</div>'+
+                        '</form>';
 
 
     function findOperation(operationId) {
@@ -121,8 +213,6 @@
         // Create an easier list of Swagger APIs.
         var apis = defaults.swagger.apis, subApis;
 
-        console.log(apis);
-
         for(var endpoint in apis) {
             if(!apis.hasOwnProperty(endpoint) || !apis[endpoint].hasOwnProperty('apis')) {
                 continue;
@@ -132,9 +222,6 @@
             endpoint = apis[endpoint];
             subApis = endpoint.apis;
 
-            console.log(endpoint);
-            console.log(subApis);
-
             for(var operation in subApis) {
                 if(!subApis.hasOwnProperty(operation) || !operation) {
                     continue;
@@ -143,31 +230,148 @@
                 operationsList[operation] = subApis[operation];
             }
         }
-
-        console.log(operationsList);
     }
 
     function applyQuest(el) {
         var operationId = el.getAttribute('data-operation'),
             operation = findOperation(operationId);
 
-        console.log(operation);
-
         if(!operation) {
             console.log('Operation not valid.');
             return false;
         }
 
-        placeElements(el, operation);
+        var placedElements = placeElements(el, operation);
+        listenEvents(placedElements);
+    }
+
+    function listenEvents(el) {
+        var actionButton = el.querySelector('.'+defaults.classNames.actionButton);
+        actionButton.addEventListener('click', executeRequest, false);
+    }
+
+    function executeRequest(e) {
+        e.preventDefault();
+
+        var quester = findParentNode(null, 'quester', e.target),
+            operation = quester.getAttribute('data-operation'),
+            form, data;
+
+        if(operationsList.hasOwnProperty(operation)) {
+            form = e.target.querySelector('form');
+            data = serializeForm(form);
+
+            console.log(data);
+
+            operationsList[operation].execute(data);
+        }
     }
 
     function placeElements(el, operation) {
         el.innerHTML = defaults.template;
 
         var summary = el.querySelector('.'+defaults.classNames.summaryContainer),
+            title = el.querySelector('.'+defaults.classNames.title),
+            parameters = el.querySelector('.'+defaults.classNames.parametersContainer),
             methodName = summary.querySelector('.'+defaults.classNames.methodName);
 
+
+
         methodName.innerHTML = operation.method.toUpperCase() + ' ' + operation.path;
+        title.innerHTML = operation.nickname;
+        console.log(parameters);
+        placeParameters(parameters, operation);
+
+        return el;
+    }
+
+    function placeParameters(el, operation) {
+        var parameters = operation.parameters,
+            len = parameters.length,
+            parameter,
+            params,
+            subEl,
+            splitModelName;
+
+        for (var i=0; i<len; ++i) {
+            if(!parameters[i]) {
+                continue;
+            }
+
+            parameter = parameters[i];
+
+            switch(parameter.in) {
+                case 'body':case 'formData':
+                    subEl = el.querySelector('.'+defaults.classNames.formParametersContainer);
+
+                    if(parameter.hasOwnProperty('schema') && !!parameter.schema && !!parameter.schema.$ref) {
+                        splitModelName = parameter.schema.$ref.split('/');
+                        splitModelName = splitModelName[splitModelName.length - 1];
+
+                        if(!operation.models.hasOwnProperty(splitModelName)) {
+                            continue;
+                        }
+
+                        params = operation.models[splitModelName];
+
+                        if(!params.hasOwnProperty('definition')
+                           || !params.definition.hasOwnProperty('properties')) {
+                            continue;
+                        }
+
+                        for(var currentParam in params.definition.properties) {
+                            if(!params.definition.properties.hasOwnProperty(currentParam) || !params.definition.properties[currentParam].hasOwnProperty('type')) {
+                                continue;
+                            }
+
+                            subEl.appendChild(createNewSingleParameter(params.definition.properties[currentParam].type, currentParam));
+                        }
+                    } else {
+                        subEl.appendChild(createNewSingleParameter('text', parameter.name));
+                    }
+
+                    break;
+                case 'path':
+                    subEl = el.querySelector('.'+defaults.classNames.pathParametersContainer);
+                    subEl.appendChild(createNewSingleParameter('text', parameter.name));
+                    break;
+                case 'query':
+                    subEl = el.querySelector('.'+defaults.classNames.queryStringParametersContainer);
+                    subEl.appendChild(createNewSingleParameter('text', parameter.name));
+                    break;
+            }
+
+            console.log(subEl);
+            el.appendChild(subEl);
+            subEl = null;
+        }
+    }
+
+    function createNewSingleParameter(type, name) {
+        console.log('createNewSingleParameter: '+name);
+        var newParam, newLabel, newParamInput;
+
+        newParam = document.createElement('div');
+        newParam.className = defaults.classNames.singleParameter;
+
+        newLabel = document.createElement('label');
+        newLabel.textContent = name;
+
+        switch(type) {
+            default:
+                newParamInput = document.createElement('input');
+                newParamInput.setAttribute('id', name);
+                newParamInput.setAttribute('name', name);
+                newParamInput.setAttribute('placeholder', name);
+
+                newLabel.appendChild(newParamInput);
+
+                break;
+        }
+
+        newParam.appendChild(newLabel);
+
+        return newParam;
     }
 
     function initialize() {
