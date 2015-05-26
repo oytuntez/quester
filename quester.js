@@ -111,7 +111,7 @@
             formParametersContainer: 'formData',
             pathParametersContainer: 'pathParams',
             singleParameter: 'parameter',
-            responseContainer: 'response',
+            executionContainer: 'response',
             actionsContainer: 'actions'
         }
     };
@@ -136,8 +136,10 @@
                         '<div class="'+defaults.classNames.actionsContainer+'">'+
                             '<button type="submit" class="'+defaults.classNames.actionButton+'">Submit</button>'+
                         '</div>'+
-                        '<div class="'+defaults.classNames.responseContainer+'">'+
-                            '<textarea></textarea>'+
+                        '<div class="'+defaults.classNames.executionContainer+'">'+
+                            '<label>Request data: <textarea class="request"></textarea></label>'+
+                            '<label>Response headers: <textarea class="responseHeader"></textarea></label>'+
+                            '<label>Response body: <textarea class="responseBody"></textarea></label>'+
                         '</div>'+
                         '</form>';
 
@@ -203,20 +205,44 @@
                 data = {body: JSON.stringify(data)};
             }
 
-            var responseProcessor = processResponse.bind({quester: quester});
+            var responseProcessor = processResponse.bind({quester: quester, params: data});
 
             operation.execute(data, responseProcessor, responseProcessor);
         }
     }
 
-    function processResponse(response, quester) {
+    function processResponse(response, params, quester) {
+        console.log(response);
+
         quester = typeof(quester) === 'undefined' ? this.quester : quester;
+        params = typeof(params) === 'undefined' ? this.params : params;
 
-        var container = quester.querySelector('.'+defaults.classNames.responseContainer),
-            area = container.querySelector('textarea');
+        var container = quester.querySelector('.'+defaults.classNames.executionContainer),
+            responseBodyArea = container.querySelector('.responseBody'),
+            responseHeaderArea = container.querySelector('.responseHeader'),
+            requestArea = container.querySelector('.request');
 
-        area.value = 'Status: '+response.status +
-                     (!!response.data ? "\n\n" + response.data : '');
+
+        // Request data.
+        requestArea.value = JSON.stringify(params);
+
+        // Response headers.
+        responseHeaderArea.value = 'Status: ' + response.obj.code + ' - ' + response.obj.message;
+
+        if(!!response.headers) {
+            responseHeaderArea.value += "\n";
+
+            for(var header in response.headers) {
+                if(!response.headers.hasOwnProperty(header)) {
+                    continue;
+                }
+
+                responseHeaderArea.value += header + ': ' + response.headers[header] + "\n";
+            }
+        }
+
+        // Response body.
+        responseBodyArea.value = response.data;
     }
 
     function compactData(form, getEmptyValues) {
