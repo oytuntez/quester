@@ -7,7 +7,7 @@
         root.Quester = factory();
     }
 })(this, function () {
-    var dr, request, parse, isValid, findParentNode, serializeForm, defaults, slice, toString, operationsList = [];
+    var dr, request, parse, isValid, findParentNode, defaults, slice, toString, operationsList = [];
     /*
      ---
      provides  : BuildSugar
@@ -38,69 +38,6 @@
         }
         // now you have the object you are looking for - do something with it
         return testObj;
-    };
-
-    serializeForm = function serialize(form)
-    {
-        if (!form || form.nodeName !== "form") {
-            return;
-        }
-        var i, j,
-            obj = {};
-        for (i = form.elements.length - 1; i >= 0; i = i - 1) {
-            if (form.elements[i].name === "") {
-                continue;
-            }
-            switch (form.elements[i].nodeName) {
-                case 'input':
-                    switch (form.elements[i].type) {
-                        case 'text':
-                        case 'hidden':
-                        case 'password':
-                        case 'button':
-                        case 'reset':
-                        case 'submit':
-                            obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
-                            break;
-                        case 'checkbox':
-                        case 'radio':
-                            if (form.elements[i].checked) {
-                                obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
-                            }
-                            break;
-                        case 'file':
-                            break;
-                    }
-                    break;
-                case 'textarea':
-                    obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
-                    break;
-                case 'select':
-                    switch (form.elements[i].type) {
-                        case 'select-one':
-                            obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
-                            break;
-                        case 'select-multiple':
-                            for (j = form.elements[i].options.length - 1; j >= 0; j = j - 1) {
-                                if (form.elements[i].options[j].selected) {
-                                    obj[form.elements[i].name] = encodeURIComponent(form.elements[i].options[j].value);
-                                }
-                            }
-                            break;
-                    }
-                    break;
-                case 'button':
-                    switch (form.elements[i].type) {
-                        case 'reset':
-                        case 'submit':
-                        case 'button':
-                            obj[form.elements[i].name] = encodeURIComponent(form.elements[i].value);
-                            break;
-                    }
-                    break;
-            }
-        }
-        return obj;
     };
 
     request = {};
@@ -166,6 +103,7 @@
             methodName: 'methodName',
             urlBox: 'url',
             actionButton: 'action',
+            formContainer: 'form',
             summaryContainer: 'summary',
             parametersContainer: 'parameters',
             headerParametersContainer: 'headers',
@@ -179,11 +117,10 @@
     };
 
     defaults.template = '<h4 class="'+defaults.classNames.title+'"></h4>'+
-                        '<form>'+
+                        '<form class="'+defaults.classNames.formContainer+'">'+
                         '<div class="'+defaults.classNames.summaryContainer+'">'+
                             '<div>'+
                                 '<span class="'+defaults.classNames.methodName+'"></span>'+
-                                '<input type="text" class="'+defaults.classNames.urlBox+'"/>'+
                             '</div>'+
                         '</div>'+
                         '<div class="'+defaults.classNames.parametersContainer+'">'+
@@ -197,7 +134,7 @@
                             '</div>'+
                         '</div>'+
                         '<div class="'+defaults.classNames.actionsContainer+'">'+
-                            '<button type="submit" class="'+defaults.classNames.actionButton+'"/>'+
+                            '<button type="submit" class="'+defaults.classNames.actionButton+'">Submit</button>'+
                         '</div>'+
                         '<div class="'+defaults.classNames.responseContainer+'">'+
                             '<textarea></textarea>'+
@@ -255,16 +192,58 @@
 
         var quester = findParentNode(null, 'quester', e.target),
             operation = quester.getAttribute('data-operation'),
-            form, data;
+            form, data, response;
 
         if(operationsList.hasOwnProperty(operation)) {
-            form = e.target.querySelector('form');
-            data = serializeForm(form);
+            operation = operationsList[operation];
+            form = findParentNode(null, defaults.classNames.formContainer, e.target);
+            data = compactData(form);
 
-            console.log(data);
+            if(operation.parameters[0].in === 'body') {
+                data = {body: JSON.stringify(data)};
+            }
 
-            operationsList[operation].execute(data);
+            var responseProcessor = processResponse.bind({quester: quester});
+
+            operation.execute(data, responseProcessor, responseProcessor);
         }
+    }
+
+    function processResponse(response, quester) {
+        quester = typeof(quester) === 'undefined' ? this.quester : quester;
+
+        var container = quester.querySelector('.'+defaults.classNames.responseContainer),
+            area = container.querySelector('textarea');
+
+        area.value = 'Status: '+response.status +
+                     (!!response.data ? "\n\n" + response.data : '');
+    }
+
+    function compactData(form, getEmptyValues) {
+        var data = {},
+            inputs = form.querySelectorAll('input, textarea');
+
+        getEmptyValues = typeof(getEmptyValues) === 'undefined' ? false : !!getEmptyValues;
+
+        if(inputs.length > 0) {
+            for(var i = 0; i < inputs.length; i++) {
+                var input = inputs[i], inputName = null;
+
+                if(!!input.getAttribute('name')) {
+                    inputName = input.getAttribute('name');
+                } else if(!!input.getAttribute('id')) {
+                    inputName = input.getAttribute('id');
+                } else {
+                    continue;
+                }
+
+                if(getEmptyValues === true || input.value.length > 0) {
+                    data[input.getAttribute('name')] = input.value;
+                }
+            }
+        }
+
+        return data;
     }
 
     function placeElements(el, operation) {
