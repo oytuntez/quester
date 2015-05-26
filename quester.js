@@ -7,7 +7,7 @@
         root.Quester = factory();
     }
 })(this, function () {
-    var dr, request, parse, isValid, findParentNode, defaults, slice, toString, operationsList = [];
+    var dr, request, parse, findParentNode, defaults, slice, toString, operationsList = [];
     /*
      ---
      provides  : BuildSugar
@@ -91,9 +91,6 @@
 
     toString = Object.prototype.toString;
     slice = Array.prototype.slice;
-    isValid = function(obj) {
-        return !(!obj || typeof obj === 'undefined');
-    };
 
     defaults = {
         swagger: null,
@@ -194,7 +191,7 @@
 
         var quester = findParentNode(null, 'quester', e.target),
             operation = quester.getAttribute('data-operation'),
-            form, data, response;
+            form, data;
 
         if(operationsList.hasOwnProperty(operation)) {
             operation = operationsList[operation];
