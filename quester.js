@@ -7,28 +7,11 @@
         root.Quester = factory();
     }
 })(this, function () {
-    var dr, request, parse, findParentNode, defaults, slice, toString, operationsList = [];
-    /*
-     ---
-     provides  : BuildSugar
-     source    : http://gist.github.com/278016
-     copyright : 2010 Thomas Aylott
-     license   : MIT
-     ...
-     */
-    dr=function(c){function f(a,b){c.push([]);return d(a,b)}function d(a,b){b=""+(b||"");a&&e("<",a,">");b&&e(b);a&&e("</",a.split(" ")[0],">");return d}d.toString=function(){return c.pop().join("")};function e(){c[c.length-1].push(c.join.call(arguments,""))}return f}([]);
-    parse = {
-        json: function (req) {
-            var result;
-            try {
-                result = JSON.parse(req.responseText);
-            } catch (e) {
-                result = req.responseText;
-            }
-            return [result, req];
-        }
-    };
-    findParentNode = function(id, className, childObj) {
+    var self = this;
+
+    this.operationsList = [];
+
+    this.findParentNode = function(id, className, childObj) {
         var testObj = childObj.parentNode;
         var count = 1;
         console.log(testObj);
@@ -40,59 +23,7 @@
         return testObj;
     };
 
-    request = {};
-    request.base = function (type, url, data) {
-        var methods = {
-            success: function () {},
-            error: function () {}
-        };
-        var XHR = window.XMLHttpRequest || ActiveXObject;
-        var request = new XHR('MSXML2.XMLHTTP.3.0');
-        request.open(type, url, true);
-        request.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-        request.onreadystatechange = function () {
-            if (request.readyState === 4) {
-                if (request.status >= 200 && request.status < 300) {
-                    methods.success.apply(methods, parse.json(request));
-                } else {
-                    methods.error.apply(methods, parse.json(request));
-                }
-            }
-        };
-        request.send(data);
-        var callbacks = {
-            success: function (callback) {
-                methods.success = callback;
-                return callbacks;
-            },
-            error: function (callback) {
-                methods.error = callback;
-                return callbacks;
-            }
-        };
-
-        return callbacks;
-    };
-    request.get = function(url, data) {
-        return request.base('GET', url, data);
-    };
-    request.post = function(url, data) {
-        return request.base('POST', url, data);
-    };
-    request.patch = function(url, data) {
-        return request.base('PATCH', url, data);
-    };
-    request.delete = function(url, data) {
-        return request.base('DELETE', url, data);
-    };
-    request.put = function(url, data) {
-        return request.base('PUT', url, data);
-    };
-
-    toString = Object.prototype.toString;
-    slice = Array.prototype.slice;
-
-    defaults = {
+    this.defaults = {
         swagger: null,
         className: 'quester',
         classNames: {
@@ -113,27 +44,27 @@
         }
     };
 
-    defaults.template = '<h4 class="'+defaults.classNames.title+'"></h4>'+
-                        '<form class="'+defaults.classNames.formContainer+'">'+
-                        '<div class="'+defaults.classNames.summaryContainer+'">'+
+    this.defaults.template = '<h4 class="'+this.defaults.classNames.title+'"></h4>'+
+                        '<form class="'+this.defaults.classNames.formContainer+'">'+
+                        '<div class="'+this.defaults.classNames.summaryContainer+'">'+
                             '<div>'+
-                                '<span class="'+defaults.classNames.methodName+'"></span>'+
+                                '<span class="'+this.defaults.classNames.methodName+'"></span>'+
                             '</div>'+
                         '</div>'+
-                        '<div class="'+defaults.classNames.parametersContainer+'">'+
-                            '<div class="'+defaults.classNames.headerParametersContainer+'">'+
+                        '<div class="'+this.defaults.classNames.parametersContainer+'">'+
+                            '<div class="'+this.defaults.classNames.headerParametersContainer+'">'+
                             '</div>'+
-                            '<div class="'+defaults.classNames.pathParametersContainer+'">'+
+                            '<div class="'+this.defaults.classNames.pathParametersContainer+'">'+
                             '</div>'+
-                            '<div class="'+defaults.classNames.queryStringParametersContainer+'">'+
+                            '<div class="'+this.defaults.classNames.queryStringParametersContainer+'">'+
                             '</div>'+
-                            '<div class="'+defaults.classNames.formParametersContainer+'">'+
+                            '<div class="'+this.defaults.classNames.formParametersContainer+'">'+
                             '</div>'+
                         '</div>'+
-                        '<div class="'+defaults.classNames.actionsContainer+'">'+
-                            '<button type="submit" class="'+defaults.classNames.actionButton+'">Submit</button>'+
+                        '<div class="'+this.defaults.classNames.actionsContainer+'">'+
+                            '<button type="submit" class="'+this.defaults.classNames.actionButton+'">Submit</button>'+
                         '</div>'+
-                        '<div class="'+defaults.classNames.executionContainer+'">'+
+                        '<div class="'+this.defaults.classNames.executionContainer+'">'+
                             '<label>Request data: <textarea class="request"></textarea></label>'+
                             '<label>Response headers: <textarea class="responseHeader"></textarea></label>'+
                             '<label>Response body: <textarea class="responseBody"></textarea></label>'+
@@ -141,13 +72,13 @@
                         '</form>';
 
 
-    function findOperation(operationId) {
-        return typeof operationsList[operationId] !== 'undefined' ? operationsList[operationId] : false;
-    }
+    this.findOperation = function(operationId) {
+        return typeof self.operationsList[operationId] !== 'undefined' ? self.operationsList[operationId] : false;
+    };
 
-    function prepareOperations() {
+    this.prepareOperations = function() {
         // Create an easier list of Swagger APIs.
-        var apis = defaults.swagger.apis, subApis;
+        var apis = this.defaults.swagger.apis, subApis;
 
         for(var endpoint in apis) {
             if(!apis.hasOwnProperty(endpoint) || !apis[endpoint].hasOwnProperty('apis')) {
@@ -163,58 +94,58 @@
                     continue;
                 }
 
-                operationsList[operation] = subApis[operation];
+                self.operationsList[operation] = subApis[operation];
             }
         }
-    }
+    };
 
-    function applyQuest(el) {
+    this.applyQuest = function(el) {
         var operationId = el.getAttribute('data-operation'),
-            operation = findOperation(operationId);
+            operation = self.findOperation(operationId);
 
         if(!operation) {
             console.log('Operation not valid.');
             return false;
         }
 
-        var placedElements = placeElements(el, operation);
-        listenEvents(placedElements);
-    }
+        var placedElements = self.placeElements(el, operation);
+        self.listenEvents(placedElements);
+    };
 
-    function listenEvents(el) {
-        var actionButton = el.querySelector('.'+defaults.classNames.actionButton);
-        actionButton.addEventListener('click', executeRequest, false);
-    }
+    this.listenEvents = function(el) {
+        var actionButton = el.querySelector('.'+this.defaults.classNames.actionButton);
+        actionButton.addEventListener('click', self.executeRequest, false);
+    };
 
-    function executeRequest(e) {
+    this.executeRequest = function(e) {
         e.preventDefault();
 
-        var quester = findParentNode(null, 'quester', e.target),
+        var quester = self.findParentNode(null, 'quester', e.target),
             operation = quester.getAttribute('data-operation'),
             form, data;
 
-        if(operationsList.hasOwnProperty(operation)) {
-            operation = operationsList[operation];
-            form = findParentNode(null, defaults.classNames.formContainer, e.target);
-            data = compactData(form);
+        if(self.operationsList.hasOwnProperty(operation)) {
+            operation = self.operationsList[operation];
+            form = self.findParentNode(null, this.defaults.classNames.formContainer, e.target);
+            data = self.compactData(form);
 
             if(operation.parameters[0].in === 'body') {
                 data = {body: JSON.stringify(data)};
             }
 
-            var responseProcessor = processResponse.bind({quester: quester, params: data});
+            var responseProcessor = self.processResponse.bind({quester: quester, params: data});
 
             operation.execute(data, responseProcessor, responseProcessor);
         }
-    }
+    };
 
-    function processResponse(response, params, quester) {
+    this.processResponse = function(response, params, quester) {
         console.log(response);
 
         quester = typeof(quester) === 'undefined' ? this.quester : quester;
         params = typeof(params) === 'undefined' ? this.params : params;
 
-        var container = quester.querySelector('.'+defaults.classNames.executionContainer),
+        var container = quester.querySelector('.'+this.defaults.classNames.executionContainer),
             responseBodyArea = container.querySelector('.responseBody'),
             responseHeaderArea = container.querySelector('.responseHeader'),
             requestArea = container.querySelector('.request');
@@ -240,9 +171,9 @@
 
         // Response body.
         responseBodyArea.value = response.data;
-    }
+    };
 
-    function compactData(form, getEmptyValues) {
+    this.compactData = function(form, getEmptyValues) {
         var data = {},
             inputs = form.querySelectorAll('input, textarea');
 
@@ -267,27 +198,27 @@
         }
 
         return data;
-    }
+    };
 
-    function placeElements(el, operation) {
-        el.innerHTML = defaults.template;
+    this.placeElements = function(el, operation) {
+        el.innerHTML = this.defaults.template;
 
-        var summary = el.querySelector('.'+defaults.classNames.summaryContainer),
-            title = el.querySelector('.'+defaults.classNames.title),
-            parameters = el.querySelector('.'+defaults.classNames.parametersContainer),
-            methodName = summary.querySelector('.'+defaults.classNames.methodName);
+        var summary = el.querySelector('.'+this.defaults.classNames.summaryContainer),
+            title = el.querySelector('.'+this.defaults.classNames.title),
+            parameters = el.querySelector('.'+this.defaults.classNames.parametersContainer),
+            methodName = summary.querySelector('.'+this.defaults.classNames.methodName);
 
 
 
         methodName.innerHTML = operation.method.toUpperCase() + ' ' + operation.path;
         title.innerHTML = operation.nickname;
         console.log(parameters);
-        placeParameters(parameters, operation);
+        self.placeParameters(parameters, operation);
 
         return el;
-    }
+    };
 
-    function placeParameters(el, operation) {
+    this.placeParameters = function(el, operation) {
         var parameters = operation.parameters,
             len = parameters.length,
             parameter,
@@ -304,7 +235,7 @@
 
             switch(parameter.in) {
                 case 'body':case 'formData':
-                    subEl = el.querySelector('.'+defaults.classNames.formParametersContainer);
+                    subEl = el.querySelector('.'+this.defaults.classNames.formParametersContainer);
 
                     if(parameter.hasOwnProperty('schema') && !!parameter.schema && !!parameter.schema.$ref) {
                         splitModelName = parameter.schema.$ref.split('/');
@@ -326,20 +257,20 @@
                                 continue;
                             }
 
-                            subEl.appendChild(createNewSingleParameter(params.definition.properties[currentParam].type, currentParam));
+                            subEl.appendChild(self.createNewSingleParameter(params.definition.properties[currentParam].type, currentParam));
                         }
                     } else {
-                        subEl.appendChild(createNewSingleParameter('text', parameter.name));
+                        subEl.appendChild(self.createNewSingleParameter('text', parameter.name));
                     }
 
                     break;
                 case 'path':
-                    subEl = el.querySelector('.'+defaults.classNames.pathParametersContainer);
-                    subEl.appendChild(createNewSingleParameter('text', parameter.name));
+                    subEl = el.querySelector('.'+this.defaults.classNames.pathParametersContainer);
+                    subEl.appendChild(self.createNewSingleParameter('text', parameter.name));
                     break;
                 case 'query':
-                    subEl = el.querySelector('.'+defaults.classNames.queryStringParametersContainer);
-                    subEl.appendChild(createNewSingleParameter('text', parameter.name));
+                    subEl = el.querySelector('.'+this.defaults.classNames.queryStringParametersContainer);
+                    subEl.appendChild(self.createNewSingleParameter('text', parameter.name));
                     break;
             }
 
@@ -347,14 +278,14 @@
             el.appendChild(subEl);
             subEl = null;
         }
-    }
+    };
 
-    function createNewSingleParameter(type, name) {
+    this.createNewSingleParameter = function(type, name) {
         console.log('createNewSingleParameter: '+name);
         var newParam, newLabel, newParamInput;
 
         newParam = document.createElement('div');
-        newParam.className = defaults.classNames.singleParameter;
+        newParam.className = this.defaults.classNames.singleParameter;
 
         newLabel = document.createElement('label');
         newLabel.textContent = name;
@@ -374,15 +305,25 @@
         newParam.appendChild(newLabel);
 
         return newParam;
-    }
+    };
 
-    function initialize() {
-        prepareOperations();
-        process();
-    }
+    this.initialize = function() {
+        var args = Object.prototype.toString.call(arguments[0]) === '[object Array]' ? arguments[0] : Array.prototype.slice.call(arguments);
 
-    function process() {
-        var els = document.getElementsByClassName(defaults.className);
+        if(typeof SwaggerClient === 'undefined' || !(args[0] instanceof SwaggerClient)) {
+            throw new Error('Provide a SwaggerClient instance.');
+        }
+
+        self.defaults.swagger = (args[0] instanceof SwaggerClient) ? args[0] : SwaggerClient;
+
+        console.log('Quester initialized.');
+
+        self.prepareOperations();
+        self.process();
+    };
+
+    this.process = function() {
+        var els = document.getElementsByClassName(this.defaults.className);
 
         if(!els || els.length < 1) {
             throw new Error('No quester element found.');
@@ -392,26 +333,15 @@
 
         for (var i=0; i<len; ++i) {
             if (i in els) {
-                applyQuest(els[i]);
+                self.applyQuest(els[i]);
                 console.log('Questered element '+i);
             }
         }
-    }
+    };
 
     function Quester() {
-        var args = toString.call(arguments[0]) === '[object Array]' ? arguments[0] : slice.call(arguments);
 
-        if(typeof SwaggerClient === 'undefined' || !(args[0] instanceof SwaggerClient)) {
-            throw new Error('Provide a SwaggerClient instance.');
-        }
-
-        defaults.swagger = (args[0] instanceof SwaggerClient) ? args[0] : SwaggerClient;
-
-        console.log('Quester initialized.');
-
-        initialize();
     }
 
-    return Quester;
-
+    return this.initialize;
 });

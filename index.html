@@ -25,7 +25,9 @@ wherever you want to show your Swagger test widget.
         url: "http://petstore.swagger.io/api/api-docs",
         success: function() {
             console.log('Swagger: success.');
-            Quester(swaggerClient);
+            // Create a new Quester instance.
+            // Can also be used directly as a function: Quester().
+            var instance = new Quester(swaggerClient);
         }
     });
 </script>
