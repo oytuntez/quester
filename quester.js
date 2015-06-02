@@ -15,7 +15,13 @@
         var testObj = childObj.parentNode;
         var count = 1;
         console.log(testObj);
-        while(!testObj || testObj.getAttribute('id') != id || testObj.className != className) {
+        console.log(className);
+        while(!testObj || testObj.getAttribute('id') != id) {
+            testObj = testObj.parentNode;
+            count++;
+        }
+
+        while(testObj.className != className) {
             testObj = testObj.parentNode;
             count++;
         }
@@ -24,6 +30,7 @@
     };
 
     this.defaults = {
+        url: null,
         swagger: null,
         className: 'quester',
         classNames: {
@@ -72,13 +79,26 @@
                         '</form>';
 
 
+    /**
+     * Overwrites obj1's values with obj2's and adds obj2's if non existent in obj1
+     * @param obj1
+     * @param obj2
+     * @returns obj3 a new object based on obj1 and obj2
+     */
+    function mergeOptions(obj1,obj2){
+        var obj3 = {};
+        for (var attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+        for (var attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+        return obj3;
+    }
+
     this.findOperation = function(operationId) {
         return typeof self.operationsList[operationId] !== 'undefined' ? self.operationsList[operationId] : false;
     };
 
     this.prepareOperations = function() {
         // Create an easier list of Swagger APIs.
-        var apis = this.defaults.swagger.apis, subApis;
+        var apis = self.defaults.swagger.apis, subApis;
 
         for(var endpoint in apis) {
             if(!apis.hasOwnProperty(endpoint) || !apis[endpoint].hasOwnProperty('apis')) {
@@ -113,7 +133,7 @@
     };
 
     this.listenEvents = function(el) {
-        var actionButton = el.querySelector('.'+this.defaults.classNames.actionButton);
+        var actionButton = el.querySelector('.'+self.defaults.classNames.actionButton);
         actionButton.addEventListener('click', self.executeRequest, false);
     };
 
@@ -126,7 +146,7 @@
 
         if(self.operationsList.hasOwnProperty(operation)) {
             operation = self.operationsList[operation];
-            form = self.findParentNode(null, this.defaults.classNames.formContainer, e.target);
+            form = self.findParentNode(null, self.defaults.classNames.formContainer, e.target);
             data = self.compactData(form);
 
             if(operation.parameters[0].in === 'body') {
@@ -142,10 +162,10 @@
     this.processResponse = function(response, params, quester) {
         console.log(response);
 
-        quester = typeof(quester) === 'undefined' ? this.quester : quester;
-        params = typeof(params) === 'undefined' ? this.params : params;
+        quester = typeof(quester) === 'undefined' ? self.quester : quester;
+        params = typeof(params) === 'undefined' ? self.params : params;
 
-        var container = quester.querySelector('.'+this.defaults.classNames.executionContainer),
+        var container = quester.querySelector('.'+self.defaults.classNames.executionContainer),
             responseBodyArea = container.querySelector('.responseBody'),
             responseHeaderArea = container.querySelector('.responseHeader'),
             requestArea = container.querySelector('.request');
@@ -201,12 +221,12 @@
     };
 
     this.placeElements = function(el, operation) {
-        el.innerHTML = this.defaults.template;
+        el.innerHTML = self.defaults.template;
 
-        var summary = el.querySelector('.'+this.defaults.classNames.summaryContainer),
-            title = el.querySelector('.'+this.defaults.classNames.title),
-            parameters = el.querySelector('.'+this.defaults.classNames.parametersContainer),
-            methodName = summary.querySelector('.'+this.defaults.classNames.methodName);
+        var summary = el.querySelector('.'+self.defaults.classNames.summaryContainer),
+            title = el.querySelector('.'+self.defaults.classNames.title),
+            parameters = el.querySelector('.'+self.defaults.classNames.parametersContainer),
+            methodName = summary.querySelector('.'+self.defaults.classNames.methodName);
 
 
 
@@ -235,7 +255,7 @@
 
             switch(parameter.in) {
                 case 'body':case 'formData':
-                    subEl = el.querySelector('.'+this.defaults.classNames.formParametersContainer);
+                    subEl = el.querySelector('.'+self.defaults.classNames.formParametersContainer);
 
                     if(parameter.hasOwnProperty('schema') && !!parameter.schema && !!parameter.schema.$ref) {
                         splitModelName = parameter.schema.$ref.split('/');
@@ -265,11 +285,11 @@
 
                     break;
                 case 'path':
-                    subEl = el.querySelector('.'+this.defaults.classNames.pathParametersContainer);
+                    subEl = el.querySelector('.'+self.defaults.classNames.pathParametersContainer);
                     subEl.appendChild(self.createNewSingleParameter('text', parameter.name));
                     break;
                 case 'query':
-                    subEl = el.querySelector('.'+this.defaults.classNames.queryStringParametersContainer);
+                    subEl = el.querySelector('.'+self.defaults.classNames.queryStringParametersContainer);
                     subEl.appendChild(self.createNewSingleParameter('text', parameter.name));
                     break;
             }
@@ -285,7 +305,7 @@
         var newParam, newLabel, newParamInput;
 
         newParam = document.createElement('div');
-        newParam.className = this.defaults.classNames.singleParameter;
+        newParam.className = self.defaults.classNames.singleParameter;
 
         newLabel = document.createElement('label');
         newLabel.textContent = name;
@@ -310,11 +330,26 @@
     this.initialize = function() {
         var args = Object.prototype.toString.call(arguments[0]) === '[object Array]' ? arguments[0] : Array.prototype.slice.call(arguments);
 
-        if(typeof SwaggerClient === 'undefined' || !(args[0] instanceof SwaggerClient)) {
-            throw new Error('Provide a SwaggerClient instance.');
-        }
+        self.defaults = mergeOptions(self.defaults, args[0]);
 
-        self.defaults.swagger = (args[0] instanceof SwaggerClient) ? args[0] : SwaggerClient;
+        if(!(self.defaults.swagger instanceof SwaggerClient)) {
+            if(typeof SwaggerClient !== 'undefined') {
+                if(!self.defaults.url) {
+                    throw new Error('Provide a SwaggerClient instance or a correct Swagger definition URL.');
+                } else {
+                    var instance = new SwaggerClient({
+                        url: self.defaults.url,
+                        success: function() {
+                            self.initialize({swagger: instance});
+                        }
+                    });
+
+                    return false;
+                }
+            } else {
+                throw new Error('Provide a SwaggerClient instance.');
+            }
+        }
 
         console.log('Quester initialized.');
 
@@ -323,7 +358,7 @@
     };
 
     this.process = function() {
-        var els = document.getElementsByClassName(this.defaults.className);
+        var els = document.getElementsByClassName(self.defaults.className);
 
         if(!els || els.length < 1) {
             throw new Error('No quester element found.');
@@ -338,10 +373,6 @@
             }
         }
     };
-
-    function Quester() {
-
-    }
 
     return this.initialize;
 });

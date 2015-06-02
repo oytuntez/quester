@@ -21,15 +21,19 @@ wherever you want to show your Swagger test widget.
 <div class="quester" data-operation="updatePetWithForm">Default.</div>
 <div class="quester" data-operation="uploadFile">Default.</div>
 <script>
-    var swaggerClient = new SwaggerClient({
+    var instance = new Quester({url: "http://petstore.swagger.io/api/api-docs"});
+
+    /*var swaggerClient = new SwaggerClient({
         url: "http://petstore.swagger.io/api/api-docs",
         success: function() {
             console.log('Swagger: success.');
             // Create a new Quester instance.
             // Can also be used directly as a function: Quester().
-            var instance = new Quester(swaggerClient);
+            var instance = new Quester({
+                swagger: swaggerClient
+            });
         }
-    });
+    });*/
 </script>
 </body>
 </html>
