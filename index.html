@@ -11,6 +11,7 @@
 Just place a Quester element on your page, similar to the ones below,
 wherever you want to show your Swagger test widget.
 -->
+
 <div class="quester" data-operation="addPet">Default.</div>
 <div class="quester" data-operation="deletePet">Default.</div>
 <div class="quester" data-operation="findPetsByStatus">Default.</div>
@@ -21,7 +22,7 @@ wherever you want to show your Swagger test widget.
 <div class="quester" data-operation="updatePetWithForm">Default.</div>
 <div class="quester" data-operation="uploadFile">Default.</div>
 <script>
-    var instance = new Quester({url: "http://petstore.swagger.io/api/api-docs"});
+    var instance = new Quester({url: "http://petstore.swagger.io/v2/swagger.json"});
 
     /*var swaggerClient = new SwaggerClient({
         url: "http://petstore.swagger.io/api/api-docs",
